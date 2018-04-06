@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/keiwi/server/models"
-	"github.com/keiwi/utils"
+	"github.com/keiwi/utils/log"
+	"github.com/keiwi/utils/log/handlers/cli"
+	"github.com/keiwi/utils/log/handlers/file"
 	"github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -24,76 +26,76 @@ var (
 	manager    *models.Manager
 	natsConn   *nats.Conn
 	tcpConn    net.Listener
-	close      bool
+	kill       bool
 )
 
 func Start() {
 	ReadConfig()
 
-	utils.Log.Info("Starting keiwi Monitor Client")
+	log.Info("Starting keiwi Monitor Client")
 
-	utils.Log.Info("Connecting to nats")
+	log.Info("Connecting to nats")
 	c, err := nats.Connect(nats.DefaultURL)
 	if err != nil {
-		utils.Log.WithError(err).Error("error connecting to nats")
+		log.WithError(err).Error("error connecting to nats")
 		return
 	}
 	natsConn = c
-	utils.Log.Info("Nats connection successful")
+	log.Info("Nats connection successful")
 
 	// Get all the clients from database and create virtual clients of them
-	utils.Log.Info("Creating the manager")
+	log.Info("Creating the manager")
 	man, err := models.NewManager(natsConn)
 	if err != nil {
 		Close()
-		utils.Log.WithError(err).Fatal("Something went wrong when creating the manager")
+		log.WithError(err).Fatal("Something went wrong when creating the manager")
 		return
 	}
 	manager = man
-	utils.Log.Info("Finished creating the manager")
+	log.Info("Finished creating the manager")
 
-	utils.Log.Info("Starting to listen for database changes")
+	log.Info("Starting to listen for database changes")
 	handleDatabaseChanges()
-	utils.Log.Info("Listening for database changes")
+	log.Info("Listening for database changes")
 
-	utils.Log.Info("Starting loop")
+	log.Info("Starting loop")
 	go func() {
 		for {
-			if close {
+			if kill {
 				return
 			}
 			go Loop(natsConn)
 			time.Sleep(time.Second * time.Duration(viper.GetInt("interval")))
 		}
 	}()
-	utils.Log.Info("Loop started")
+	log.Info("Loop started")
 
-	utils.Log.Info("Configuring certificates")
+	log.Info("Configuring certificates")
 	cer, err := tls.LoadX509KeyPair("D:/ssh/server.crt", "D:/ssh/server.key")
 	if err != nil {
 		Close()
-		utils.Log.WithError(err).Error("error loading certificate")
+		log.WithError(err).Error("error loading certificate")
 		return
 	}
 	config := &tls.Config{Certificates: []tls.Certificate{cer}}
 
-	utils.Log.Info("Starting TCP server")
+	log.Info("Starting TCP server")
 	s, err := tls.Listen("tcp", viper.GetString("server_ip"), config)
 	if err != nil {
 		Close()
-		utils.Log.WithError(err).Error("error starting TLS server")
+		log.WithError(err).Error("error starting TLS server")
 		return
 	}
-	utils.Log.WithField("ip", s.Addr().String()).Info("TCP server started")
+	log.WithField("ip", s.Addr().String()).Info("TCP server started")
 
-	utils.Log.Info("Waiting for clients")
+	log.Info("Waiting for clients")
 	for {
 		conn, err := s.Accept()
 		if err != nil {
-			utils.Log.WithError(err).Error("error accepting TLS request")
+			log.WithError(err).Error("error accepting TLS request")
 			continue
 		}
-		utils.Log.WithField("connection", conn.RemoteAddr().String()).Info("TCP client trying to connect")
+		log.WithField("connection", conn.RemoteAddr().String()).Info("TCP client trying to connect")
 
 		go handleConnection(conn)
 	}
@@ -107,7 +109,7 @@ func Loop(conn *nats.Conn) {
 }
 
 func Close() {
-	close = true
+	kill = true
 	if natsConn != nil {
 		natsConn.Close()
 	}
@@ -138,16 +140,16 @@ func ReadConfig() {
 	viper.SetDefault("nats_delay", 10)
 
 	if err := viper.ReadInConfig(); err != nil {
-		utils.Log.Debug("Config file not found, saving default")
+		log.Debug("Config file not found, saving default")
 		if err = viper.WriteConfigAs("config." + configType); err != nil {
-			utils.Log.WithField("error", err.Error()).Fatal("Can't save default config")
+			log.WithField("error", err.Error()).Fatal("Can't save default config")
 		}
 	}
 
 	level := strings.ToLower(viper.GetString("log_level"))
-	utils.Log = utils.NewLogger(utils.NameToLevel[level], &utils.LoggerConfig{
-		Dirname: viper.GetString("log_dir"),
-		Logname: viper.GetString("log_syntax"),
+	log.Log = log.NewLogger(log.GetLevelFromString(level), []log.Reporter{
+		cli.NewCli(),
+		file.NewFile(viper.GetString("log_dir"), viper.GetString("log_syntax")),
 	})
 }
 
@@ -155,16 +157,16 @@ func handleConnection(conn net.Conn) {
 	accepted, err := Handshake(conn)
 	if err != nil {
 		conn.Close()
-		utils.Log.WithError(err).Error("handshake failed")
+		log.WithError(err).Error("handshake failed")
 		return
 	}
 
 	if !accepted {
 		conn.Close()
-		utils.Log.WithField("ip", conn.RemoteAddr().String()).Info("tcp handshake declined")
+		log.WithField("ip", conn.RemoteAddr().String()).Info("tcp handshake declined")
 		return
 	}
-	utils.Log.WithField("ip", conn.RemoteAddr().String()).Info("tcp handshake accepted")
+	log.WithField("ip", conn.RemoteAddr().String()).Info("tcp handshake accepted")
 
 	ip := conn.RemoteAddr().(*net.TCPAddr).IP.String()
 	for cl := range manager.IterClients() {
@@ -182,7 +184,7 @@ func Handshake(conn net.Conn) (bool, error) {
 	}
 	password = strings.TrimSpace(password)
 
-	utils.Log.WithField("server_password", viper.GetString("password")).WithField("client_password", password).Info("Checking password")
+	log.WithField("server_password", viper.GetString("password")).WithField("client_password", password).Info("Checking password")
 
 	if password != viper.GetString("password") {
 		_, err := fmt.Fprintln(conn, "declined")

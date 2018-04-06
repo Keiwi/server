@@ -24,11 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  name = "github.com/apex/log"
-  version = "1.0.0"
-
 [[constraint]]
   branch = "master"
   name = "github.com/keiwi/utils"

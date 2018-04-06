@@ -11,8 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apex/log"
-	"github.com/keiwi/utils"
+	"github.com/keiwi/utils/log"
 	"github.com/keiwi/utils/models"
 	"github.com/nats-io/go-nats"
 	"gopkg.in/mgo.v2/bson"
@@ -355,11 +354,11 @@ func (c *Client) SendCheck(conn *nats.Conn, check *Check) string {
 			ch.UpdatedAt = time.Now()
 
 			if err = CreateCheck(conn, ch); err != nil {
-				utils.Log.WithField("error", err).Error("error updating last check")
+				log.WithField("error", err).Error("error updating last check")
 				return ""
 			}
 		} else {
-			utils.Log.WithField("error", err).Error("error updating last check")
+			log.WithField("error", err).Error("error updating last check")
 			return ""
 		}
 	}
@@ -428,7 +427,7 @@ func (c *Client) SaveCheck(conn *nats.Conn, check *Check, resp string) {
 	ch.UpdatedAt = time.Now()
 
 	if err := CreateCheck(conn, ch); err != nil {
-		utils.Log.WithField("error", err).Error("error inserting new check")
+		log.WithField("error", err).Error("error inserting new check")
 		check.SetError(true)
 		return
 	}
@@ -485,7 +484,7 @@ func (c *Client) StartCheck(conn *nats.Conn) {
 		}
 
 		// Send some debug message
-		utils.Log.WithFields(log.Fields{
+		log.WithFields(log.Fields{
 			"CommandID": check.Command().ID(),
 			"ClientID":  c.ID(),
 		}).Info("Starting a check for client")

@@ -6,6 +6,7 @@ import (
 
 	"github.com/keiwi/server/models"
 	"github.com/keiwi/utils"
+	"github.com/keiwi/utils/log"
 
 	db "github.com/keiwi/utils/models"
 
@@ -54,7 +55,7 @@ func handleDatabaseChanges() {
 		var alert db.AlertOption
 		err := bson.UnmarshalJSON(m.Data, &alert)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
 			return
 		}
 
@@ -78,7 +79,7 @@ func handleDatabaseChanges() {
 		var alerts []db.AlertOption
 		err := bson.UnmarshalJSON(m.Data, &alerts)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
 			return
 		}
 
@@ -100,7 +101,7 @@ func handleDatabaseChanges() {
 		var alert db.AlertOption
 		err := bson.UnmarshalJSON(m.Data, &alert)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "alerts.update")
 			return
 		}
 
@@ -135,7 +136,7 @@ func handleDatabaseChanges() {
 		var checks []db.Check
 		err := bson.UnmarshalJSON(m.Data, &checks)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "checks.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "checks.update")
 			return
 		}
 
@@ -150,7 +151,7 @@ func handleDatabaseChanges() {
 		var client db.Client
 		err := bson.UnmarshalJSON(m.Data, &client)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "clients.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "clients.update")
 			return
 		}
 
@@ -169,7 +170,7 @@ func handleDatabaseChanges() {
 		var clients []db.Client
 		err := bson.UnmarshalJSON(m.Data, &clients)
 		if err != nil {
-			utils.Log.WithError(err).Errorf("error decoding event (%s)", "clients.update")
+			log.WithError(err).Errorf("error decoding event (%s)", "clients.update")
 			return
 		}
 
