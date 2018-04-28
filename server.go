@@ -146,10 +146,12 @@ func ReadConfig() {
 		}
 	}
 
+	fileConfig := file.Config{Folder: viper.GetString("log_dir"), Filename: viper.GetString("log_syntax")}
+
 	level := strings.ToLower(viper.GetString("log_level"))
 	log.Log = log.NewLogger(log.GetLevelFromString(level), []log.Reporter{
 		cli.NewCli(),
-		file.NewFile(viper.GetString("log_dir"), viper.GetString("log_syntax")),
+		file.NewFile(&fileConfig),
 	})
 }
 

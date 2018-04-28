@@ -8,9 +8,10 @@ import (
 )
 
 func main() {
+	fileConfig := file.Config{Folder: "./logs", Filename: "%date%_server.log"}
 	log.Log = log.NewLogger(log.DEBUG, []log.Reporter{
 		cli.NewCli(),
-		file.NewFile("./logs", "%date%_server.log"),
+		file.NewFile(&fileConfig),
 	})
 	server.Start()
 }
